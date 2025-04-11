@@ -1,61 +1,75 @@
+<!-- === templates/index.html === -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hexagon Tile Game</title>
+    <title>CheckMate</title>
     <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-        }
-        #board {
-            display: grid;
-            grid-template-columns: repeat(10, 60px);
-            grid-template-rows: repeat(10, 52px);
-            gap: 2px;
-        }
-        .hex {
-            width: 60px;
-            height: 52px;
-            background-color: lightgray;
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-            transition: background-color 0.2s;
-        }
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; }
+        #board { display: grid; grid-template-columns: repeat(8, 60px); width: 480px; margin: auto; }
+        .square { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; }
+        .white { background-color: white; }
+        .black { background-color: black; }
+        .P1, .P2 { width: 40px; height: 40px; border-radius: 50%; }
+        .P1 { background-color: red; }
+        .P2 { background-color: blue; }
+        input { margin: 10px; padding: 5px; }
     </style>
 </head>
 <body>
+    <h1>CheckMate</h1>
+    <audio controls autoplay loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-buddy.mp3" type="audio/mp3">
+        Your browser does not support the audio element.
+    </audio>
 
-<div id="board">
-    <!-- Hexagonal tiles will be added here on clicks -->
-</div>
+    <div id="board"></div>
+    <div>
+        <input id="from" placeholder="From (e.g., a3)"> 
+        <input id="to" placeholder="To (e.g., b4)"> 
+        <button onclick="makeMove()">Move</button>
+    </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // Create an empty board of hex tiles
-        for (let i = 0; i < 100; i++) {
-            const hexTile = $('<div class="hex"></div>');
-            hexTile.data("clicked", false);  // Track if a tile has been clicked
-            $('#board').append(hexTile);
+    <script>
+        const board = {{ board|tojson }};
+        const boardDiv = document.getElementById('board');
+
+        function drawBoard() {
+            boardDiv.innerHTML = '';
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const square = document.createElement('div');
+                    square.className = 'square ' + ((r + c) % 2 === 0 ? 'white' : 'black');
+                    const coord = String.fromCharCode(97 + c) + (8 - r);
+                    square.dataset.pos = coord;
+
+                    const piece = board[r][c];
+                    if (piece) {
+                        const pieceDiv = document.createElement('div');
+                        pieceDiv.className = piece;
+                        square.appendChild(pieceDiv);
+                        square.onclick = () => document.getElementById('from').value = coord;
+                    } else {
+                        square.onclick = () => document.getElementById('to').value = coord;
+                    }
+
+                    boardDiv.appendChild(square);
+                }
+            }
         }
 
-        // Add color to hex tiles on click
-        $('#board').on('click', '.hex', function() {
-            if (!$(this).data("clicked")) {  // Only allow one click per tile
-                $.getJSON('/add_tile', function(data) {
-                    $(this).css('background-color', data.color);
-                    $(this).data("clicked", true);  // Mark as clicked
-                }.bind(this));
-            }
-        });
-    });
-</script>
+        function makeMove() {
+            const from = document.getElementById('from').value.toLowerCase();
+            const to = document.getElementById('to').value.toLowerCase();
+            fetch('/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ from, to })
+            }).then(res => res.json())
+              .then(data => { if (data.success) location.reload(); });
+        }
 
+        drawBoard();
+    </script>
 </body>
 </html>
